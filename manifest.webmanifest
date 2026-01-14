@@ -1,0 +1,16 @@
+{
+  "name": "Calisthenics Tracker",
+  "short_name": "Calisthenics",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#0b1220",
+  "theme_color": "#111827",
+  "description": "Suivi de séances de calisthénie (offline, timer, historique).",
+  "icons": [
+    {
+      "src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAABYUlEQVR4nO2aMQ6CQBBFz7G0gQbQwQbQwQbQwQbQwQZ4Q4b7m0k6g1u3c0mYwZy8m5l9wQ5m0mQ0gY2Qh8gqg5y4g7g8m8kq5m2o0hQyq6gX0kYx8o8m0mGZrJqk3n4vQ3Yl4y5m0p7x8n2c0VwS0QKJtqg0gJm4r9kYkK4s2m8GZQZ7b0m9k0mY9gqQb7b9gqg6pK3g2B0bQkqg7w8m4H0m0bQkqg7w8m4H0m0bQkqg7w8m4H0m0bQkqg7w8m4H0m0bQkqg7w8m4H0m0bQkqg7w8m4H0m0bQkqg7w8m4H0m0bQkqg7w8m4H0m0bQkqg7w8m4H0m0bQkqg7w8m4H0m0bQkqg7w8m4H0m0bQkqg7w8m4H0m0bQkqg7w8m4H0m0bQkqg7w8m4H0m0bQkqg7w8m4H0m0bQkqg7w8m4H0m0bQkqg7w8m4H0m0bQkqg7w8m4H0m0bQkqg7w8m4H0m0bQkqg7w8m4H0m0bQkqg7w8m4H0m0bQkqg7w8m4H0m0bQkqg7w8m4H0m0bQkqg7w8m4H0m0bQkqg7w8m4H0m0bQkqg7w8m4H0m0bQkqg7w8m4H0m0bQkqg7w8m4H0m0bQkqg7w8m4H0m0bQkqg7w8m4H0m0bQkqg7w8m4H0m0bQkqg7w8m4H0m0bQkqg7w8m4H0m0bQkqg7w8m4H0m0bQkqg7w8m4H0m0bQkqg7w8m4H0m0bQkqg7w8m4H0m0bQkqg7w8m4H0m0bQkqg7w8m4H0m0bQkqg7w8m4H0m0bQkqg7w8m4H0m0bQkqg7w8m4H0m0bQkqg7w8m4H0m0bQkqg7w8m4H0m0bQkqg7w8m4H0m0bQkqg7w8m4H0m0bQkqg7w8m4H0m0bQkqg7w8m4H0m0bQkqg7w8m4H0m0bQkqg7w8m4H0m0Yk8wJY9gP7gAAAABJRU5ErkJggg==",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}
