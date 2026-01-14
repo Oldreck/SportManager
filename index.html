@@ -331,6 +331,30 @@ const KEY = "ct_db_v1";
 function uid(){ return Math.floor(Date.now() * 1000 + Math.random()*1000); }
 function now(){ return Date.now(); }
 
+// ==== DIAGNOSTIC (à laisser le temps qu'on répare) ====
+(function(){
+  const bar = document.createElement("div");
+  bar.id = "diag";
+  bar.style.cssText = "position:sticky;top:0;z-index:9999;padding:10px 12px;background:#16a34a;color:white;font-weight:800;font-size:13px;";
+  bar.textContent = "✅ JS OK (script chargé)";
+  document.body.prepend(bar);
+})();
+
+window.addEventListener("error", (e) => {
+  alert("ERREUR JS: " + (e.message || e.error));
+});
+window.addEventListener("unhandledrejection", (e) => {
+  alert("PROMESSE REJETÉE: " + (e.reason?.message || e.reason));
+});
+
+// Test localStorage
+try {
+  localStorage.setItem("__ct_test", "1");
+  localStorage.removeItem("__ct_test");
+} catch (e) {
+  alert("localStorage BLOQUÉ (stockage interdit). Ouvre dans Chrome et autorise le stockage du site.");
+}
+  
 function loadDB(){
   try{
     const raw = localStorage.getItem(KEY);
