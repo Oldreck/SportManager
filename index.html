@@ -342,7 +342,15 @@ function loadDB(){
     return seedDB();
   }
 }
-function saveDB(db){ localStorage.setItem(KEY, JSON.stringify(db)); }
+function saveDB(db){
+  try {
+    localStorage.setItem(KEY, JSON.stringify(db));
+    return true;
+  } catch (e) {
+    toast("⚠️ Stockage bloqué : ouvre dans Chrome et autorise les données du site.");
+    return false;
+  }
+}
 
 function seedDB(){
   const db = {
@@ -355,7 +363,7 @@ function seedDB(){
     ],
     history: []
   };
-  saveDB(db);
+  if(!saveDB(db)) return;
   return db;
 }
 
@@ -438,7 +446,7 @@ function renderWorkouts(){
     b.addEventListener("click", ()=>{
       const id = Number(b.dataset.del);
       db.workouts = db.workouts.filter(x=> x.id !== id);
-      saveDB(db);
+      if(!saveDB(db)) return;
       toast("Séance supprimée");
       renderWorkouts();
       renderStats();
@@ -451,7 +459,7 @@ $("w-add").addEventListener("click", ()=>{
   const notes = $("w-notes").value.trim();
   if(!name){ toast("Nom requis"); return; }
   db.workouts.unshift({ id: uid(), name, notes, items: [] });
-  saveDB(db);
+  if(!saveDB(db)) return;
   $("w-name").value = "";
   $("w-notes").value = "";
   toast("Séance ajoutée");
@@ -532,7 +540,7 @@ $("wd-lib-add").addEventListener("click", ()=>{
 
   const item = buildItem(name, addMode);
   w.items.push(item);
-  saveDB(db);
+  if(!saveDB(db)) return;
   toast("Exercice ajouté");
   renderWorkoutItems();
 });
@@ -548,7 +556,7 @@ $("wd-add-item").addEventListener("click", ()=>{
   }
   const item = buildItem(name, addMode);
   w.items.push(item);
-  saveDB(db);
+  if(!saveDB(db)) return;
   toast("Exercice ajouté");
   renderWorkoutItems();
 });
@@ -612,7 +620,7 @@ function renderWorkoutItems(){
       if(i<=0) return;
       const w = getCurrentWorkout();
       const tmp = w.items[i-1]; w.items[i-1]=w.items[i]; w.items[i]=tmp;
-      saveDB(db);
+      if(!saveDB(db)) return;
       renderWorkoutItems();
     });
   });
@@ -622,7 +630,7 @@ function renderWorkoutItems(){
       const w = getCurrentWorkout();
       if(i>=w.items.length-1) return;
       const tmp = w.items[i+1]; w.items[i+1]=w.items[i]; w.items[i]=tmp;
-      saveDB(db);
+      if(!saveDB(db)) return;
       renderWorkoutItems();
     });
   });
@@ -631,7 +639,7 @@ function renderWorkoutItems(){
       const i = Number(b.dataset.delitem);
       const w = getCurrentWorkout();
       w.items.splice(i,1);
-      saveDB(db);
+      if(!saveDB(db)) return;
       toast("Exercice supprimé");
       renderWorkoutItems();
     });
@@ -837,7 +845,7 @@ function finishRun(save){
       totalSeconds: totalSec,
       items: summary
     });
-    saveDB(db);
+    if(!saveDB(db)) return;
     toast("Séance enregistrée");
   }
   showScreen("history");
