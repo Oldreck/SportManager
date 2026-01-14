@@ -383,6 +383,125 @@ function saveDB(db){
 
 let db = loadDB();
 
+const DEFAULT_EXERCISES = [
+  // --- PUSH (pompes & variations)
+  "Push-ups", "Knee push-ups", "Incline push-ups", "Decline push-ups",
+  "Diamond push-ups", "Wide push-ups", "Pseudo planche push-ups",
+  "Archer push-ups", "Typewriter push-ups", "Pike push-ups",
+  "Elevated pike push-ups", "Handstand push-up (wall)", "Handstand push-up",
+  "Hindu push-ups", "Clap push-ups", "Explosive push-ups",
+  "Ring push-ups", "Ring archer push-ups",
+
+  // --- DIPS & support
+  "Bench dips", "Parallel bar dips", "Straight bar dips",
+  "Korean dips", "Ring dips", "Ring support hold",
+  "Dip negatives", "Dip top hold",
+
+  // --- PULL (tractions)
+  "Dead hang", "Active hang", "Scapular pull-ups",
+  "Australian rows", "Inverted rows (rings)", "Inverted rows (bar)",
+  "Pull-ups", "Chin-ups", "Neutral grip pull-ups",
+  "Wide grip pull-ups", "Close grip pull-ups",
+  "Archer pull-ups", "Typewriter pull-ups",
+  "L-sit pull-ups", "Chest-to-bar pull-ups",
+  "Commando pull-ups", "Towel pull-ups",
+  "One arm hang", "Assisted one arm pull-up",
+  "Negative one arm pull-up",
+
+  // --- MUSCLE-UP & transitions
+  "Straight bar muscle-up", "Ring muscle-up",
+  "Muscle-up transition drill", "Jumping muscle-up",
+  "Band assisted muscle-up", "False grip hang",
+  "False grip row", "False grip pull-up",
+
+  // --- CORE (abdos)
+  "Plank", "Side plank", "Hollow body hold", "Arch hold (superman)",
+  "Dead bug", "Bird dog",
+  "Crunches", "Reverse crunches", "Leg raises (lying)",
+  "Hanging knee raises", "Hanging leg raises", "Toes-to-bar",
+  "V-ups", "Windshield wipers",
+  "Russian twists", "Mountain climbers",
+  "Dragon flag (tuck)", "Dragon flag",
+  "Ab wheel (si tu en as un)",
+
+  // --- L-SIT / V-SIT / compression
+  "Tuck sit", "L-sit (parallettes)", "L-sit (rings)", "L-sit (floor)",
+  "L-sit raises", "L-sit to tuck", "L-sit to V-sit (drill)",
+  "Seated pike compression", "Standing pike compression",
+  "V-SIT",
+  "Pike hold", "Straddle hold",
+
+  // --- HANDSTAND / équilibre
+  "Wall handstand", "Wall handstand shoulder taps",
+  "Freestanding handstand (practice)", "Handstand entry drills",
+  "Crow pose", "Frog stand",
+  "Tuck planche lean", "Planche lean",
+
+  // --- PLANCHE progressions
+  "Planche lean", "Tuck planche", "Advanced tuck planche",
+  "Straddle planche (progression)", "Planche (full) (progression)",
+  "Planche push-ups (progression)",
+
+  // --- FRONT LEVER progressions
+  "Front lever tuck", "Front lever advanced tuck",
+  "Front lever one leg", "Front lever straddle",
+  "Front lever (full) (progression)", "Front lever raises (progression)",
+
+  // --- BACK LEVER progressions
+  "Skin the cat", "German hang (progression)",
+  "Back lever tuck", "Back lever advanced tuck",
+  "Back lever straddle", "Back lever (full) (progression)",
+
+  // --- HUMAN FLAG progressions
+  "Human flag tuck", "Human flag (progression)",
+
+  // --- LEGS (jambes)
+  "Bodyweight squats", "Narrow squats", "Wide squats",
+  "Jump squats", "Pistol squat (assisted)", "Pistol squat negatives",
+  "Pistol squat", "Shrimp squat (assisted)", "Shrimp squat",
+  "Lunges", "Reverse lunges", "Walking lunges", "Jump lunges",
+  "Step-ups", "Cossack squats",
+  "Glute bridge", "Single leg glute bridge",
+  "Nordic hamstring (assisted)", "Nordic hamstring negatives",
+  "Calf raises", "Single leg calf raises",
+
+  // --- SHOULDERS / scapula / préhab
+  "Scapular push-ups", "Scapular wall slides",
+  "Band pull-aparts (si élastique)", "Face pulls (élastique)",
+  "External rotations (élastique)",
+
+  // --- MOBILITY / warm-up (utile en calisthenics)
+  "Wrist warm-up", "Shoulder mobility flow",
+  "Hip mobility flow", "Hamstring stretch (pike)",
+  "Pancake stretch", "Bridge (progression)",
+
+  // --- CONDITIONING (optionnel)
+  "Burpees", "High knees", "Jump rope (si corde)", "Bear crawl", "Crab walk"
+];
+
+function ensureDefaultLibrary() {
+  if (!db.library || !Array.isArray(db.library)) db.library = [];
+
+  const existing = new Set(db.library.map(e => (e.name || "").trim().toLowerCase()));
+  let added = 0;
+
+  DEFAULT_EXERCISES.forEach(name => {
+    const key = name.trim().toLowerCase();
+    if (!key || existing.has(key)) return;
+    db.library.push({ id: uid(), name: name.trim() });
+    existing.add(key);
+    added += 1;
+  });
+
+  db.library.sort((a,b) => a.name.localeCompare(b.name, "fr"));
+  if (added > 0) {
+    saveDB(db);
+    toast(`Bibliothèque enrichie (+${added})`);
+  } else {
+    toast("Bibliothèque déjà complète");
+  }
+}
+  
 /* ---- nav ---- */
 const screens = ["workouts","workout","run","library","history","stats"];
 function showScreen(name){
@@ -1098,7 +1217,7 @@ window.addEventListener("DOMContentLoaded", ()=>{
   if("serviceWorker" in navigator){
     navigator.serviceWorker.register("./sw.js").catch(()=>{});
   }
-
+  ensureDefaultLibrary();
   renderAll();
 });
 </script>
