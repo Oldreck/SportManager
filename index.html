@@ -282,7 +282,59 @@
   <section id="screen-library" class="screen">
     <div class="card">
       <h2>Bibliothèque d’exercices</h2>
+      <label>Recherche</label>
+<input id="lib-search" placeholder="Ex: frog, handstand, squat..." />
+
+<div class="two" style="margin-top:10px;">
+  <div>
+    <label>Filtre catégorie</label>
+    <select id="lib-filter">
+      <option value="Tous">Tous</option>
+      <option value="Push">Push</option>
+      <option value="Pull">Pull</option>
+      <option value="Legs">Legs</option>
+      <option value="Core">Core</option>
+      <option value="Skill">Skill</option>
+      <option value="Mobility">Mobility</option>
+      <option value="Conditioning">Conditioning</option>
+      <option value="Unsorted">Unsorted</option>
+    </select>
+  </div>
+  <div>
+    <label>Filtre niveau</label>
+    <select id="lib-level">
+      <option value="Tous">Tous</option>
+      <option value="Débutant">Débutant</option>
+      <option value="Intermédiaire">Intermédiaire</option>
+      <option value="Avancé">Avancé</option>
+    </select>
+  </div>
+</div>
+      
       <label>Nom</label>
+      <div class="two" style="margin-top:10px;">
+  <div>
+    <label>Catégorie</label>
+    <select id="lib-new-category">
+      <option value="Push">Push</option>
+      <option value="Pull">Pull</option>
+      <option value="Legs">Legs</option>
+      <option value="Core">Core</option>
+      <option value="Skill">Skill</option>
+      <option value="Mobility">Mobility</option>
+      <option value="Conditioning">Conditioning</option>
+      <option value="Unsorted" selected>Unsorted</option>
+    </select>
+  </div>
+  <div>
+    <label>Niveau</label>
+    <select id="lib-new-level">
+      <option value="Débutant" selected>Débutant</option>
+      <option value="Intermédiaire">Intermédiaire</option>
+      <option value="Avancé">Avancé</option>
+    </select>
+  </div>
+</div>
       <input id="lib-name" placeholder="Ex: Pull-ups" />
       <div class="row" style="margin-top:10px;">
         <button class="btn primary" id="lib-add">Ajouter</button>
@@ -310,6 +362,11 @@
         <div class="item"><div class="item-title"><strong>Séances réalisées</strong><span id="s-count">0</span></div></div>
         <div class="item"><div class="item-title"><strong>Temps total</strong><span id="s-time">0</span></div></div>
         <div class="item"><div class="item-title"><strong>Reps totales (sets validés)</strong><span id="s-reps">0</span></div></div>
+        <div class="hr"></div>
+<h2>Graphique (7 derniers jours)</h2>
+<canvas id="stats-chart" width="900" height="260"
+  style="width:100%;border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.02);"></canvas>
+<div class="muted">Nombre de séances enregistrées par jour.</div>
       </div>
     </div>
   </section>
@@ -383,6 +440,29 @@ function saveDB(db){
 
 let db = loadDB();
 
+  function ensureSchema() {
+  // library entries: {id,name, category, level}
+  if (!Array.isArray(db.library)) db.library = [];
+  db.library = db.library.map(e => ({
+    id: e.id ?? uid(),
+    name: (e.name ?? "").trim(),
+    category: (e.category ?? "Unsorted"),
+    level: (e.level ?? "Tous")
+  })).filter(e => e.name.length > 0);
+
+  // workout items: add block field (default "Circuit")
+  if (!Array.isArray(db.workouts)) db.workouts = [];
+  db.workouts.forEach(w => {
+    if (!Array.isArray(w.items)) w.items = [];
+    w.items = w.items.map(it => ({
+      ...it,
+      block: it.block ?? "Circuit"
+    }));
+  });
+
+  saveDB(db);
+}
+  
 const DEFAULT_EXERCISES = [
   // --- PUSH (pompes & variations)
   "Push-ups", "Knee push-ups", "Incline push-ups", "Decline push-ups",
@@ -509,6 +589,7 @@ function showScreen(name){
     const el = $("screen-"+s);
     if(el) el.classList.toggle("active", s===name);
   });
+  ensureSchema();
   renderAll();
 }
 function bindNav(){
@@ -536,6 +617,7 @@ function renderWorkouts(){
         <strong>${escapeHtml(w.name)}</strong>
         <div class="row">
           <button class="btn smallbtn" data-open="${w.id}">Ouvrir</button>
+          <button class="btn smallbtn" data-dup="${w.id}">Dupliquer</button>
           <button class="btn smallbtn" data-edit="${w.id}">✏️</button>
           <button class="btn smallbtn danger" data-del="${w.id}">Suppr.</button>
         </div>
@@ -579,6 +661,26 @@ function renderWorkouts(){
       renderStats();
     });
   });
+  list.querySelectorAll("[data-dup]").forEach(b=>{
+  b.addEventListener("click", ()=>{
+    const id = Number(b.dataset.dup);
+    const w = db.workouts.find(x=> x.id===id);
+    if(!w) return;
+
+    const copyName = (w.name + " (copie)").trim();
+    const copy = {
+      id: uid(),
+      name: copyName,
+      notes: w.notes || "",
+      items: (w.items || []).map(it => ({ ...it, id: uid() }))
+    };
+
+    db.workouts.unshift(copy);
+    if(!saveDB(db)) return;
+    toast("Séance dupliquée");
+    renderWorkouts();
+  });
+});
 }
 
 function bindWorkouts(){
@@ -676,7 +778,20 @@ function renderWorkoutItems(){
     return;
   }
 
-  w.items.forEach((it, idx)=>{
+  const grouped = {};
+w.items.forEach((it, idx) => {
+  const b = it.block || "Circuit";
+  if(!grouped[b]) grouped[b] = [];
+  grouped[b].push({it, idx});
+});
+
+Object.keys(grouped).forEach(blockName => {
+  const head = document.createElement("div");
+  head.className = "item";
+  head.innerHTML = `<strong>📦 ${escapeHtml(blockName)}</strong>`;
+  list.appendChild(head);
+
+  grouped[blockName].forEach(({it, idx}) => {
     const div = document.createElement("div");
     div.className = "item";
     div.innerHTML = `
@@ -689,10 +804,22 @@ function renderWorkoutItems(){
           <button class="btn smallbtn danger" data-delitem="${idx}">Suppr.</button>
         </div>
       </div>
-      <div class="chips">${displayItemChips(it)}</div>
+      <div class="chips">
+        <span class="chip">${escapeHtml(it.block || "Circuit")}</span>
+        ${displayItemChips(it)}
+      </div>
     `;
     list.appendChild(div);
   });
+});
+
+  <label>Bloc</label>
+<select id="wd-block">
+  <option value="Échauffement">Échauffement</option>
+  <option value="Circuit" selected>Circuit</option>
+  <option value="Finisher">Finisher</option>
+  <option value="Mobility">Mobility</option>
+</select>
 
   list.querySelectorAll("[data-up]").forEach(b=>{
     b.addEventListener("click", ()=>{
@@ -784,6 +911,7 @@ function buildItem(name, mode){
       id: uid(),
       name,
       mode: "TIME",
+      block: $("wd-block")?.value || "Circuit",
       work: Math.max(1, safeInt($("t-work").value, 30)),
       rest: Math.max(0, safeInt($("t-rest").value, 30)),
       rounds: Math.max(1, safeInt($("t-rounds").value, 1))
@@ -793,6 +921,7 @@ function buildItem(name, mode){
       id: uid(),
       name,
       mode: "REPS",
+      block: $("wd-block")?.value || "Circuit",
       reps: Math.max(1, safeInt($("r-reps").value, 8)),
       sets: Math.max(1, safeInt($("r-sets").value, 3)),
       restSet: Math.max(0, safeInt($("r-rest").value, 60))
@@ -1071,11 +1200,24 @@ function finishRun(save){
 function renderLibrary(){
   const list = $("lib-list");
   list.innerHTML = "";
-  if(db.library.length===0){
-    list.innerHTML = `<div class="muted">Bibliothèque vide.</div>`;
+
+  const q = ($("lib-search")?.value || "").trim().toLowerCase();
+  const cat = $("lib-filter")?.value || "Tous";
+  const lvl = $("lib-level")?.value || "Tous";
+
+  const filtered = db.library.filter(ex => {
+    const okQ = !q || ex.name.toLowerCase().includes(q);
+    const okC = (cat === "Tous") || ex.category === cat;
+    const okL = (lvl === "Tous") || ex.level === lvl;
+    return okQ && okC && okL;
+  });
+
+  if(filtered.length===0){
+    list.innerHTML = `<div class="muted">Aucun exercice trouvé.</div>`;
     return;
   }
-  db.library.forEach(ex=>{
+
+  filtered.forEach(ex=>{
     const div = document.createElement("div");
     div.className = "item";
     div.innerHTML = `
@@ -1085,6 +1227,10 @@ function renderLibrary(){
           <button class="btn smallbtn" data-libedit="${ex.id}">✏️</button>
           <button class="btn smallbtn danger" data-libdel="${ex.id}">Suppr.</button>
         </div>
+      </div>
+      <div class="chips">
+        <span class="chip">${escapeHtml(ex.category)}</span>
+        <span class="chip">${escapeHtml(ex.level)}</span>
       </div>
     `;
     list.appendChild(div);
@@ -1107,9 +1253,20 @@ function renderLibrary(){
       const id = Number(b.dataset.libedit);
       const ex = db.library.find(x=> x.id===id);
       if(!ex) return;
-      const name = prompt("Nom de l'exercice :", ex.name);
+
+      const name = prompt("Nom :", ex.name);
       if(name===null) return;
+
+      const category = prompt("Catégorie (Push/Pull/Legs/Core/Skill/Mobility/Conditioning/Unsorted) :", ex.category);
+      if(category===null) return;
+
+      const level = prompt("Niveau (Débutant/Intermédiaire/Avancé) :", ex.level);
+      if(level===null) return;
+
       ex.name = name.trim() || ex.name;
+      ex.category = (category || ex.category).trim() || ex.category;
+      ex.level = (level || ex.level).trim() || ex.level;
+
       if(!saveDB(db)) return;
       toast("Modifié");
       renderLibrary();
@@ -1120,16 +1277,24 @@ function renderLibrary(){
 
 function bindLibrary(){
   $("lib-add").addEventListener("click", ()=>{
-    const name = ($("lib-name").value||"").trim();
-    if(!name){ toast("Nom requis"); return; }
-    db.library.push({id:uid(), name});
-    db.library.sort((a,b)=> a.name.localeCompare(b.name));
-    if(!saveDB(db)) return;
-    $("lib-name").value="";
-    toast("Ajouté");
-    renderLibrary();
-    renderLibrarySelect();
-  });
+  const name = ($("lib-name").value||"").trim();
+  if(!name){ toast("Nom requis"); return; }
+
+  const category = $("lib-new-category")?.value || "Unsorted";
+  const level = $("lib-new-level")?.value || "Débutant";
+
+  db.library.push({id:uid(), name, category, level});
+  db.library.sort((a,b)=> a.name.localeCompare(b.name, "fr"));
+  if(!saveDB(db)) return;
+
+  $("lib-name").value="";
+  toast("Ajouté");
+  renderLibrary();
+  renderLibrarySelect();
+});
+    $("lib-search").addEventListener("input", renderLibrary);
+    $("lib-filter").addEventListener("change", renderLibrary);
+    $("lib-level").addEventListener("change", renderLibrary);
 }
 
 /* ---- history + stats ---- */
@@ -1161,6 +1326,62 @@ function renderHistory(){
   });
 }
 
+function drawWeeklyChart() {
+  const c = $("stats-chart");
+  if(!c) return;
+  const ctx = c.getContext("2d");
+  if(!ctx) return;
+
+  // Construire la liste des 7 derniers jours
+  const days = [];
+  for(let i=6;i>=0;i--){
+    const d = new Date();
+    d.setDate(d.getDate()-i);
+    days.push({
+      key: d.toISOString().slice(0,10),
+      label: d.toLocaleDateString("fr-FR",{weekday:"short"})
+    });
+  }
+
+  // Compter les séances par jour
+  const counts = days.map(_ => 0);
+  db.history.forEach(h=>{
+    const key = new Date(h.startedAt).toISOString().slice(0,10);
+    const idx = days.findIndex(x=> x.key===key);
+    if(idx>=0) counts[idx] += 1;
+  });
+
+  // Dessin
+  const W = c.width, H = c.height;
+  ctx.clearRect(0,0,W,H);
+
+  ctx.fillStyle = "#e5e7eb";
+  ctx.font = "14px system-ui";
+  ctx.fillText("Séances / jour", 12, 20);
+
+  const max = Math.max(1, ...counts);
+  const pad = 28;
+  const slot = (W - pad*2) / 7;
+  const barW = Math.max(10, Math.floor(slot) - 14);
+
+  for(let i=0;i<7;i++){
+    const x = pad + i*slot + 7;
+    const h = Math.round((counts[i]/max) * (H - 90));
+    const y = H - 50 - h;
+
+    ctx.fillStyle = "rgba(34,197,94,.75)";
+    ctx.fillRect(x, y, barW, h);
+
+    ctx.fillStyle = "#e5e7eb";
+    ctx.font = "14px system-ui";
+    ctx.fillText(String(counts[i]), x+2, y-6);
+
+    ctx.fillStyle = "rgba(229,231,235,.75)";
+    ctx.font = "13px system-ui";
+    ctx.fillText(days[i].label, x, H-22);
+  }
+}
+    
 function renderStats(){
   const count = db.history.length;
   let totalSeconds = 0;
@@ -1176,6 +1397,7 @@ function renderStats(){
   $("s-count").textContent = String(count);
   $("s-time").textContent = fmtTime(totalSeconds);
   $("s-reps").textContent = String(totalReps);
+  drawWeeklyChart();
 }
 
 /* ---- render all ---- */
