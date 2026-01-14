@@ -1,0 +1,848 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Calisthenics Tracker</title>
+
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#111827">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+
+  <style>
+    :root { --bg:#0b1220; --card:#111827; --muted:#9ca3af; --text:#e5e7eb; --accent:#22c55e; --danger:#ef4444; --line:#243047; }
+    *{ box-sizing:border-box; }
+    body{
+      margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+      background:linear-gradient(180deg,#070b14,#0b1220); color:var(--text);
+    }
+    header{
+      position:sticky; top:0; z-index:5;
+      backdrop-filter: blur(10px);
+      background: rgba(7,11,20,.75);
+      border-bottom:1px solid var(--line);
+      padding:14px 16px;
+      display:flex; gap:10px; align-items:center; justify-content:space-between;
+    }
+    header h1{ margin:0; font-size:16px; letter-spacing:.4px; }
+    nav{ display:flex; gap:8px; flex-wrap:wrap; }
+    .btn{
+      border:1px solid var(--line); background:rgba(255,255,255,.03); color:var(--text);
+      padding:10px 12px; border-radius:12px; font-weight:600; font-size:13px;
+    }
+    .btn.primary{ background:rgba(34,197,94,.15); border-color: rgba(34,197,94,.35); }
+    .btn.danger{ background:rgba(239,68,68,.12); border-color: rgba(239,68,68,.35); }
+    .btn:active{ transform: translateY(1px); }
+
+    main{ padding:16px; max-width:980px; margin:0 auto; }
+    .grid{ display:grid; gap:12px; grid-template-columns: 1fr; }
+    @media(min-width:900px){ .grid{ grid-template-columns: 420px 1fr; align-items:start; } }
+
+    .card{
+      background: rgba(17,24,39,.88);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 14px;
+      box-shadow: 0 10px 25px rgba(0,0,0,.25);
+    }
+    .card h2{ margin:0 0 8px 0; font-size:15px; }
+    .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    label{ display:block; font-size:12px; color:var(--muted); margin:8px 0 6px; }
+    input, select, textarea{
+      width:100%;
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.03);
+      color:var(--text);
+      padding:10px 12px;
+      border-radius: 12px;
+      outline:none;
+      font-size:14px;
+    }
+    textarea{ min-height:64px; resize:vertical; }
+    .muted{ color:var(--muted); font-size:12px; }
+    .list{ display:flex; flex-direction:column; gap:10px; margin-top:10px; }
+    .item{
+      border:1px solid var(--line); border-radius:16px; padding:12px;
+      background: rgba(255,255,255,.02);
+    }
+    .item-title{ display:flex; gap:10px; align-items:center; justify-content:space-between; }
+    .item-title strong{ font-size:14px; }
+    .chips{ display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
+    .chip{
+      font-size:12px; color:var(--muted);
+      border:1px solid var(--line);
+      padding:6px 10px; border-radius:999px;
+      background: rgba(255,255,255,.02);
+    }
+    .two{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .three{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
+
+    .screen{ display:none; }
+    .screen.active{ display:block; }
+
+    .runner{
+      display:grid; gap:12px;
+    }
+    .big{
+      font-size:52px; font-weight:800; letter-spacing: .5px;
+    }
+    .phase{
+      font-size:14px; font-weight:800; letter-spacing:.8px;
+      display:inline-flex; align-items:center; gap:8px;
+      padding:8px 12px; border-radius:999px;
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.02);
+      width: fit-content;
+    }
+    progress{ width:100%; height:14px; border-radius:999px; overflow:hidden; }
+    progress::-webkit-progress-bar{ background:rgba(255,255,255,.06); }
+    progress::-webkit-progress-value{ background:rgba(34,197,94,.85); }
+
+    .split{ display:flex; justify-content:space-between; gap:10px; align-items:center; }
+    .hr{ height:1px; background: var(--line); margin:10px 0; }
+
+    .toast{
+      position:fixed; left:50%; bottom:18px; transform:translateX(-50%);
+      background: rgba(17,24,39,.95);
+      border:1px solid var(--line);
+      padding:10px 12px; border-radius:14px;
+      font-size:13px; display:none;
+      box-shadow: 0 12px 30px rgba(0,0,0,.35);
+      z-index: 50;
+    }
+    .toast.show{ display:block; }
+    .smallbtn{ padding:8px 10px; border-radius:12px; font-size:12px; }
+  </style>
+</head>
+<body>
+<header>
+  <h1>Calisthenics Tracker</h1>
+  <nav>
+    <button class="btn" data-nav="workouts">Séances</button>
+    <button class="btn" data-nav="library">Bibliothèque</button>
+    <button class="btn" data-nav="history">Historique</button>
+    <button class="btn" data-nav="stats">Stats</button>
+  </nav>
+</header>
+
+<main>
+  <!-- Workouts -->
+  <section id="screen-workouts" class="screen active">
+    <div class="grid">
+      <div class="card">
+        <h2>Créer une séance</h2>
+        <label>Nom</label>
+        <input id="w-name" placeholder="Ex: Pull day" />
+        <label>Notes (optionnel)</label>
+        <textarea id="w-notes" placeholder="Ex: 40/20 – 4 tours"></textarea>
+        <div class="row" style="margin-top:10px;">
+          <button class="btn primary" id="w-add">Ajouter</button>
+        </div>
+        <p class="muted">Tout est sauvegardé localement sur ta tablette.</p>
+      </div>
+
+      <div class="card">
+        <div class="split">
+          <h2>Mes séances</h2>
+          <button class="btn smallbtn" id="w-export">Exporter</button>
+        </div>
+        <div class="muted">Astuce : exporte de temps en temps pour garder une sauvegarde.</div>
+        <div class="hr"></div>
+        <div id="w-list" class="list"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Workout detail -->
+  <section id="screen-workout" class="screen">
+    <div class="card">
+      <div class="split">
+        <div>
+          <h2 id="wd-title">Séance</h2>
+          <div class="muted" id="wd-notes"></div>
+        </div>
+        <div class="row">
+          <button class="btn" id="wd-back">Retour</button>
+          <button class="btn primary" id="wd-start">Lancer</button>
+        </div>
+      </div>
+
+      <div class="hr"></div>
+
+      <h2>Ajouter un exercice</h2>
+
+      <div class="two">
+        <div>
+          <label>Depuis la bibliothèque</label>
+          <select id="wd-lib-select"></select>
+          <button class="btn" id="wd-lib-add" style="margin-top:10px;">Ajouter</button>
+        </div>
+        <div>
+          <label>Nom personnalisé (optionnel)</label>
+          <input id="wd-custom-name" placeholder="Ex: Ring dips" />
+          <div class="muted">Si vide, le nom de la bibliothèque est utilisé.</div>
+        </div>
+      </div>
+
+      <div class="hr"></div>
+
+      <div class="row">
+        <button class="btn" id="mode-time">Mode TIME</button>
+        <button class="btn" id="mode-reps">Mode REPS/SETS</button>
+      </div>
+
+      <div id="block-time" style="margin-top:10px;">
+        <div class="three">
+          <div>
+            <label>Travail (secondes)</label>
+            <input id="t-work" inputmode="numeric" value="30" />
+          </div>
+          <div>
+            <label>Repos (secondes)</label>
+            <input id="t-rest" inputmode="numeric" value="30" />
+          </div>
+          <div>
+            <label>Rounds</label>
+            <input id="t-rounds" inputmode="numeric" value="1" />
+          </div>
+        </div>
+      </div>
+
+      <div id="block-reps" style="margin-top:10px; display:none;">
+        <div class="three">
+          <div>
+            <label>Reps</label>
+            <input id="r-reps" inputmode="numeric" value="8" />
+          </div>
+          <div>
+            <label>Sets</label>
+            <input id="r-sets" inputmode="numeric" value="3" />
+          </div>
+          <div>
+            <label>Repos entre sets (s)</label>
+            <input id="r-rest" inputmode="numeric" value="60" />
+          </div>
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:12px;">
+        <button class="btn primary" id="wd-add-item">Ajouter l’exercice</button>
+      </div>
+
+      <div class="hr"></div>
+
+      <div class="split">
+        <h2>Ordre des exercices</h2>
+        <div class="muted">Utilise ▲ ▼ pour réordonner (fiable sur tablette)</div>
+      </div>
+      <div id="wd-items" class="list"></div>
+    </div>
+  </section>
+
+  <!-- Runner -->
+  <section id="screen-run" class="screen">
+    <div class="card runner">
+      <div class="split">
+        <div>
+          <div class="phase" id="run-phase">—</div>
+          <h2 id="run-name" style="margin-top:10px;">—</h2>
+          <div class="muted" id="run-label">—</div>
+        </div>
+        <div class="row">
+          <button class="btn" id="run-exit">Quitter</button>
+        </div>
+      </div>
+
+      <div id="run-time-block">
+        <div class="big" id="run-time">0</div>
+        <progress id="run-progress" value="0" max="1"></progress>
+      </div>
+
+      <div id="run-reps-block" style="display:none;">
+        <div class="big" id="run-reps">0 reps</div>
+        <div class="muted" id="run-set">Set 1/1</div>
+        <div class="row" style="margin-top:10px;">
+          <button class="btn primary" id="run-mark">Marquer set fait</button>
+          <button class="btn" id="run-unmark">Annuler</button>
+        </div>
+        <div class="hr"></div>
+        <div class="muted">Si un repos entre sets est défini, le timer se lance automatiquement.</div>
+      </div>
+
+      <div class="row">
+        <button class="btn primary" id="run-pause">Pause</button>
+        <button class="btn" id="run-next">Suivant</button>
+        <button class="btn danger" id="run-finish">Fin & Enregistrer</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Library -->
+  <section id="screen-library" class="screen">
+    <div class="card">
+      <h2>Bibliothèque d’exercices</h2>
+      <label>Nom</label>
+      <input id="lib-name" placeholder="Ex: Pull-ups" />
+      <div class="row" style="margin-top:10px;">
+        <button class="btn primary" id="lib-add">Ajouter</button>
+      </div>
+      <div class="hr"></div>
+      <div id="lib-list" class="list"></div>
+      <p class="muted">Tu peux ajouter ici tous tes exercices réutilisables.</p>
+    </div>
+  </section>
+
+  <!-- History -->
+  <section id="screen-history" class="screen">
+    <div class="card">
+      <h2>Historique</h2>
+      <div id="h-list" class="list"></div>
+      <p class="muted">Les séances enregistrées apparaissent ici.</p>
+    </div>
+  </section>
+
+  <!-- Stats -->
+  <section id="screen-stats" class="screen">
+    <div class="card">
+      <h2>Stats</h2>
+      <div class="list">
+        <div class="item"><div class="item-title"><strong>Séances réalisées</strong><span id="s-count">0</span></div></div>
+        <div class="item"><div class="item-title"><strong>Temps total</strong><span id="s-time">0</span></div></div>
+        <div class="item"><div class="item-title"><strong>Reps totales (sets validés)</strong><span id="s-reps">0</span></div></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div id="toast" class="toast"></div>
+
+<script>
+/** -----------------------------
+ *  Storage / Data Model
+ *  -----------------------------
+ *  db = {
+ *    workouts: [{id,name,notes,items:[...]}],
+ *    library: [{id,name}],
+ *    history: [{id, workoutId, workoutName, startedAt, endedAt, totalSeconds, items:[...]}]
+ *  }
+ */
+const KEY = "ct_db_v1";
+
+function uid(){ return Math.floor(Date.now() * 1000 + Math.random()*1000); }
+function now(){ return Date.now(); }
+
+function loadDB(){
+  try{
+    const raw = localStorage.getItem(KEY);
+    if(!raw) return seedDB();
+    const db = JSON.parse(raw);
+    if(!db.workouts) return seedDB();
+    return db;
+  }catch(e){
+    return seedDB();
+  }
+}
+function saveDB(db){ localStorage.setItem(KEY, JSON.stringify(db)); }
+
+function seedDB(){
+  const db = {
+    workouts: [],
+    library: [
+      {id: uid(), name:"Push-ups"},
+      {id: uid(), name:"Pull-ups"},
+      {id: uid(), name:"Dips"},
+      {id: uid(), name:"Squats"}
+    ],
+    history: []
+  };
+  saveDB(db);
+  return db;
+}
+
+let db = loadDB();
+
+/** -----------------------------
+ *  UI Helpers
+ *  ----------------------------- */
+const $ = (id)=> document.getElementById(id);
+function toast(msg){
+  const t = $("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  setTimeout(()=> t.classList.remove("show"), 1800);
+}
+function safeInt(v, def){ const n = parseInt(String(v||"").trim(),10); return Number.isFinite(n) ? n : def; }
+function fmtTime(sec){
+  sec = Math.max(0, sec|0);
+  const m = Math.floor(sec/60), s = sec%60;
+  return m>0 ? `${m}m ${String(s).padStart(2,"0")}s` : `${s}s`;
+}
+function fmtDate(ms){
+  const d = new Date(ms);
+  return d.toLocaleDateString("fr-FR") + " " + d.toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"});
+}
+
+/** -----------------------------
+ *  Navigation
+ *  ----------------------------- */
+const screens = ["workouts","workout","run","library","history","stats"];
+function showScreen(name){
+  screens.forEach(s => {
+    const el = $("screen-"+s);
+    if(el) el.classList.toggle("active", s===name);
+  });
+  renderAll();
+}
+document.querySelectorAll("[data-nav]").forEach(btn=>{
+  btn.addEventListener("click", ()=> showScreen(btn.dataset.nav));
+});
+
+/** -----------------------------
+ *  Workouts list
+ *  ----------------------------- */
+let currentWorkoutId = null;
+
+function renderWorkouts(){
+  const list = $("w-list");
+  list.innerHTML = "";
+  if(db.workouts.length === 0){
+    list.innerHTML = `<div class="muted">Aucune séance pour l’instant.</div>`;
+    return;
+  }
+  db.workouts.forEach(w=>{
+    const div = document.createElement("div");
+    div.className = "item";
+    div.innerHTML = `
+      <div class="item-title">
+        <strong>${escapeHtml(w.name)}</strong>
+        <div class="row">
+          <button class="btn smallbtn" data-open="${w.id}">Ouvrir</button>
+          <button class="btn smallbtn danger" data-del="${w.id}">Suppr.</button>
+        </div>
+      </div>
+      ${w.notes ? `<div class="muted" style="margin-top:6px;">${escapeHtml(w.notes)}</div>` : ``}
+      <div class="chips">
+        <span class="chip">${(w.items||[]).length} exercice(s)</span>
+      </div>
+    `;
+    list.appendChild(div);
+  });
+
+  list.querySelectorAll("[data-open]").forEach(b=>{
+    b.addEventListener("click", ()=>{
+      currentWorkoutId = Number(b.dataset.open);
+      showWorkoutDetail();
+    });
+  });
+  list.querySelectorAll("[data-del]").forEach(b=>{
+    b.addEventListener("click", ()=>{
+      const id = Number(b.dataset.del);
+      db.workouts = db.workouts.filter(x=> x.id !== id);
+      saveDB(db);
+      toast("Séance supprimée");
+      renderWorkouts();
+      renderStats();
+    });
+  });
+}
+
+$("w-add").addEventListener("click", ()=>{
+  const name = $("w-name").value.trim();
+  const notes = $("w-notes").value.trim();
+  if(!name){ toast("Nom requis"); return; }
+  db.workouts.unshift({ id: uid(), name, notes, items: [] });
+  saveDB(db);
+  $("w-name").value = "";
+  $("w-notes").value = "";
+  toast("Séance ajoutée");
+  renderWorkouts();
+});
+
+$("w-export").addEventListener("click", ()=>{
+  const data = JSON.stringify(db, null, 2);
+  const blob = new Blob([data], {type:"application/json"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "calisthenics-tracker-backup.json";
+  a.click();
+  URL.revokeObjectURL(url);
+  toast("Export téléchargé");
+});
+
+/** -----------------------------
+ *  Workout Detail
+ *  ----------------------------- */
+let addMode = "TIME"; // TIME or REPS
+
+function getCurrentWorkout(){
+  return db.workouts.find(w=> w.id === currentWorkoutId);
+}
+
+function showWorkoutDetail(){
+  const w = getCurrentWorkout();
+  if(!w){ showScreen("workouts"); return; }
+  $("wd-title").textContent = w.name;
+  $("wd-notes").textContent = w.notes || "";
+  renderLibrarySelect();
+  renderWorkoutItems();
+  showScreen("workout");
+}
+
+$("wd-back").addEventListener("click", ()=> showScreen("workouts"));
+$("wd-start").addEventListener("click", ()=> startRunner());
+
+$("mode-time").addEventListener("click", ()=>{
+  addMode = "TIME";
+  $("block-time").style.display = "";
+  $("block-reps").style.display = "none";
+  toast("Mode TIME");
+});
+$("mode-reps").addEventListener("click", ()=>{
+  addMode = "REPS";
+  $("block-time").style.display = "none";
+  $("block-reps").style.display = "";
+  toast("Mode REPS/SETS");
+});
+
+function renderLibrarySelect(){
+  const sel = $("wd-lib-select");
+  sel.innerHTML = "";
+  if(db.library.length === 0){
+    sel.innerHTML = `<option value="">(Bibliothèque vide)</option>`;
+    return;
+  }
+  db.library.forEach(ex=>{
+    const o = document.createElement("option");
+    o.value = ex.id;
+    o.textContent = ex.name;
+    sel.appendChild(o);
+  });
+}
+
+$("wd-lib-add").addEventListener("click", ()=>{
+  const w = getCurrentWorkout();
+  if(!w) return;
+  const libId = Number($("wd-lib-select").value || 0);
+  const lib = db.library.find(x=> x.id === libId);
+  if(!lib){ toast("Choisis un exercice"); return; }
+
+  const customName = $("wd-custom-name").value.trim();
+  const name = customName || lib.name;
+
+  const item = buildItem(name, addMode);
+  w.items.push(item);
+  saveDB(db);
+  toast("Exercice ajouté");
+  renderWorkoutItems();
+});
+
+$("wd-add-item").addEventListener("click", ()=>{
+  const w = getCurrentWorkout();
+  if(!w) return;
+
+  const name = $("wd-custom-name").value.trim();
+  if(!name){
+    toast("Mets un nom (ou utilise la bibliothèque)");
+    return;
+  }
+  const item = buildItem(name, addMode);
+  w.items.push(item);
+  saveDB(db);
+  toast("Exercice ajouté");
+  renderWorkoutItems();
+});
+
+function buildItem(name, mode){
+  if(mode === "TIME"){
+    return {
+      id: uid(),
+      name,
+      mode: "TIME",
+      work: safeInt($("t-work").value, 30),
+      rest: safeInt($("t-rest").value, 30),
+      rounds: Math.max(1, safeInt($("t-rounds").value, 1))
+    };
+  }else{
+    return {
+      id: uid(),
+      name,
+      mode: "REPS",
+      reps: Math.max(1, safeInt($("r-reps").value, 8)),
+      sets: Math.max(1, safeInt($("r-sets").value, 3)),
+      restSet: Math.max(0, safeInt($("r-rest").value, 60))
+    };
+  }
+}
+
+function renderWorkoutItems(){
+  const w = getCurrentWorkout();
+  const list = $("wd-items");
+  list.innerHTML = "";
+  if(!w || !w.items || w.items.length === 0){
+    list.innerHTML = `<div class="muted">Ajoute des exercices pour commencer.</div>`;
+    return;
+  }
+
+  w.items.forEach((it, idx)=>{
+    const div = document.createElement("div");
+    div.className = "item";
+    div.innerHTML = `
+      <div class="item-title">
+        <strong>${escapeHtml(it.name)}</strong>
+        <div class="row">
+          <button class="btn smallbtn" data-up="${idx}">▲</button>
+          <button class="btn smallbtn" data-down="${idx}">▼</button>
+          <button class="btn smallbtn danger" data-delitem="${idx}">Suppr.</button>
+        </div>
+      </div>
+      <div class="chips">
+        ${it.mode==="TIME"
+          ? `<span class="chip">TIME</span><span class="chip">${it.work}s / ${it.rest}s</span><span class="chip">${it.rounds} rounds</span>`
+          : `<span class="chip">REPS</span><span class="chip">${it.reps} reps × ${it.sets} sets</span><span class="chip">repos ${it.restSet}s</span>`
+        }
+      </div>
+    `;
+    list.appendChild(div);
+  });
+
+  list.querySelectorAll("[data-up]").forEach(b=>{
+    b.addEventListener("click", ()=>{
+      const i = Number(b.dataset.up);
+      if(i<=0) return;
+      const w = getCurrentWorkout();
+      const tmp = w.items[i-1]; w.items[i-1]=w.items[i]; w.items[i]=tmp;
+      saveDB(db);
+      renderWorkoutItems();
+    });
+  });
+  list.querySelectorAll("[data-down]").forEach(b=>{
+    b.addEventListener("click", ()=>{
+      const i = Number(b.dataset.down);
+      const w = getCurrentWorkout();
+      if(i>=w.items.length-1) return;
+      const tmp = w.items[i+1]; w.items[i+1]=w.items[i]; w.items[i]=tmp;
+      saveDB(db);
+      renderWorkoutItems();
+    });
+  });
+  list.querySelectorAll("[data-delitem]").forEach(b=>{
+    b.addEventListener("click", ()=>{
+      const i = Number(b.dataset.delitem);
+      const w = getCurrentWorkout();
+      w.items.splice(i,1);
+      saveDB(db);
+      toast("Exercice supprimé");
+      renderWorkoutItems();
+    });
+  });
+}
+
+/** -----------------------------
+ *  Runner (timer + reps)
+ *  ----------------------------- */
+let runSteps = [];
+let runIndex = 0;
+let runRunning = false;
+let runTick = null;
+let runSecondsLeft = 0;
+let runStartedAt = 0;
+let runRepsDone = new Set(); // step index marked done
+
+function startRunner(){
+  const w = getCurrentWorkout();
+  if(!w || !w.items || w.items.length===0){ toast("Ajoute des exercices"); return; }
+  runSteps = buildSteps(w.items);
+  runIndex = 0;
+  runRepsDone = new Set();
+  runStartedAt = now();
+  runRunning = true;
+  loadStep(0, true);
+  showScreen("run");
+}
+
+function buildSteps(items){
+  const steps = [];
+  items.forEach(it=>{
+    if(it.mode === "TIME"){
+      for(let r=1; r<=it.rounds; r++){
+        steps.push({ kind:"TIME", phase:"WORK", name:it.name, label:`Travail • Round ${r}/${it.rounds}`, seconds: it.work });
+        if(it.rest>0) steps.push({ kind:"TIME", phase:"REST", name:it.name, label:`Repos`, seconds: it.rest });
+      }
+    }else{
+      for(let s=1; s<=it.sets; s++){
+        steps.push({ kind:"REPS", phase:"SET", name:it.name, label:`Set ${s}/${it.sets}`, reps: it.reps, set:s, sets:it.sets, seconds:0, restSet: it.restSet });
+        if(s<it.sets && it.restSet>0){
+          steps.push({ kind:"REPS", phase:"SET_REST", name:it.name, label:`Repos entre sets`, reps: it.reps, set:s, sets:it.sets, seconds: it.restSet, restSet: it.restSet });
+        }
+      }
+    }
+  });
+  return steps;
+}
+
+function beep(){
+  try{
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.type = "sine";
+    o.frequency.value = 880;
+    o.connect(g); g.connect(ctx.destination);
+    g.gain.setValueAtTime(0.0001, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.12, ctx.currentTime + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.12);
+    o.start();
+    o.stop(ctx.currentTime + 0.13);
+  }catch(e){}
+}
+function vibrate(ms){
+  if(navigator.vibrate) navigator.vibrate(ms);
+}
+function transSignal(){
+  beep(); vibrate(80);
+}
+
+function loadStep(i, autoStart){
+  if(i<0) i=0;
+  if(i>=runSteps.length){
+    finishRun(true);
+    return;
+  }
+  runIndex = i;
+  const st = runSteps[runIndex];
+
+  $("run-name").textContent = st.name;
+  $("run-label").textContent = st.label;
+
+  const phaseText = st.kind==="TIME"
+      ? (st.phase==="WORK" ? "TRAVAIL" : "REPOS")
+      : (st.phase==="SET" ? "REPS/SETS" : "REPOS SETS");
+  $("run-phase").textContent = phaseText;
+
+  // Toggle blocks
+  if(st.kind==="TIME" || st.seconds>0){
+    $("run-time-block").style.display = "";
+  } else {
+    $("run-time-block").style.display = "none";
+  }
+  $("run-reps-block").style.display = (st.kind==="REPS") ? "" : "none";
+
+  // TIME UI
+  runSecondsLeft = st.seconds || 0;
+  $("run-time").textContent = runSecondsLeft;
+  $("run-progress").max = Math.max(1, st.seconds || 1);
+  $("run-progress").value = 0;
+
+  // REPS UI
+  if(st.kind==="REPS"){
+    $("run-reps").textContent = `${st.reps} reps`;
+    $("run-set").textContent = `Set ${st.set}/${st.sets}`;
+    updateMarkButtons();
+  }
+
+  if(autoStart){
+    clearInterval(runTick);
+    if(st.seconds>0){
+      runTick = setInterval(tick, 1000);
+    }
+  }
+}
+
+function tick(){
+  if(!runRunning) return;
+  const st = runSteps[runIndex];
+  if(!st || (st.seconds||0)<=0) return;
+
+  runSecondsLeft = Math.max(0, runSecondsLeft - 1);
+  $("run-time").textContent = runSecondsLeft;
+  $("run-progress").value = (st.seconds - runSecondsLeft);
+
+  if(runSecondsLeft<=0){
+    transSignal();
+    clearInterval(runTick);
+    loadStep(runIndex+1, true);
+  }
+}
+
+function setRunning(r){
+  runRunning = r;
+  $("run-pause").textContent = r ? "Pause" : "Reprendre";
+  if(r){
+    // restart timer if needed
+    const st = runSteps[runIndex];
+    if(st && (st.seconds||0)>0){
+      clearInterval(runTick);
+      runTick = setInterval(tick, 1000);
+    }
+  }else{
+    clearInterval(runTick);
+  }
+}
+
+$("run-pause").addEventListener("click", ()=> setRunning(!runRunning));
+$("run-next").addEventListener("click", ()=>{
+  transSignal();
+  clearInterval(runTick);
+  loadStep(runIndex+1, true);
+});
+$("run-exit").addEventListener("click", ()=>{
+  if(confirm("Quitter sans enregistrer ?")){
+    clearInterval(runTick);
+    showScreen("workouts");
+  }
+});
+
+$("run-finish").addEventListener("click", ()=> finishRun(true));
+
+function updateMarkButtons(){
+  const marked = runRepsDone.has(runIndex);
+  $("run-mark").disabled = marked;
+  $("run-unmark").disabled = !marked;
+}
+
+$("run-mark").addEventListener("click", ()=>{
+  runRepsDone.add(runIndex);
+  transSignal();
+  updateMarkButtons();
+
+  // Si le step actuel est "SET" (sans timer), passer au suivant
+  const st = runSteps[runIndex];
+  if(st && st.kind==="REPS" && st.phase==="SET"){
+    clearInterval(runTick);
+    loadStep(runIndex+1, true);
+  }
+});
+$("run-unmark").addEventListener("click", ()=>{
+  runRepsDone.delete(runIndex);
+  updateMarkButtons();
+  toast("Annulé");
+});
+
+function finishRun(save){
+  clearInterval(runTick);
+  const ended = now();
+  const w = getCurrentWorkout();
+
+  if(save && w){
+    const totalSec = Math.max(0, Math.round((ended - runStartedAt)/1000));
+    const summary = summarizeRun();
+
+    db.history.unshift({
+      id: uid(),
+      workoutId: w.id,
+      workoutName: w.name,
+      startedAt: runStartedAt,
+      endedAt: ended,
+      totalSeconds: totalSec,
+      items: summary
+    });
+    saveDB(db);
+    toast("Séance enregistrée");
+  }
+  showScreen("history");
+}
+
+function summarizeRun(){
+  // group by name + mode
+  const map = new
